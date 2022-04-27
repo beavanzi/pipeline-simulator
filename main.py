@@ -9,6 +9,7 @@ from copy import deepcopy
 
 # MODELO DE DADO QUE NAO É INSTRUÇAO:
 # [0000|0000|0000| 4 bits informaçao]
+# será que é isso mesmo??
 
 # OPCODES:
 # add - 0001
@@ -33,22 +34,21 @@ class Instruction:
     def getId(self):
         return 'Inst ' + self.id
 
+    def setR1(self, value):
+        self.r1 = value
+
+    def setR2(self, value):
+        self.r2 = value
+
 
 class Memory:
     memory: list
 
     def __init__(self) -> None:
         self.memory = []
-        self.head = 0
 
     def saveInMemory(self, word: list):
         self.memory.append(word)
-
-    # def getNextInMemory(self) -> list:
-    #     dataOrInstruction = deepcopy(self.memory[self.head])
-    #     self.head = self.head + 1
-    #
-    #     return dataOrInstruction
 
     def getMemorySize(self):
         return len(self.memory)
@@ -135,10 +135,9 @@ class Registers:
     def __init__(self):
         # self.instructions_status = []
         self.MBR = []     # armazena uma palavra de dados
-        self.MAR = 0     # armazena um end de memoria
+        self.MAR = None     # armazena um end de memoria
         self.PC = 0       # armazena o end da inst a ser executada
-        self.IR = 0      # contem a ultima instruçao buscada
-        self.ACC = ""
+        self.IR = None      # contem a ultima instruçao buscada
 
         # self.register_status = {
         #     'r0': "",
@@ -153,32 +152,20 @@ class Registers:
 
         #     }
 
-    # def is_all_instructions_writen(self):
-    #     for inst in self.instructions_status:
-    #         if inst.write == "":
-    #             return False
-    #     return True
-
     def incrementPc(self):
         self.PC = self.PC + 1
 
     def setMBR(self, mbr):
-        self.MBR = mbr
+        self.MBR = deepcopy(mbr)
 
     def setMAR(self, mar):
-        self.MAR = mar
+        self.MAR = deepcopy(mar)
 
     def setIR(self, ir):
-        self.IR = ir
+        self.IR = deepcopy(ir)
 
 
 # FUNÇOES AUXILIARES ----------------------------------------------
-# def print_table_example():
-#     l = [["Hassan", 21, "LUMS"], ["Ali", 22, "FAST"], ["Ahmed", 23, "UET"]]
-#     table = tabulate(l, headers=['Name', 'Age', 'University'], tablefmt='orgtbl')
-#
-#     print(table)
-
 
 def is_instruction(data):
     opcodes = {
@@ -196,7 +183,7 @@ def is_instruction(data):
 
 
 def empty_pipeline(memory: Memory, registers: Registers, table: PipelineTable):
-    return memory.getMemorySize() <= registers.PC #and table.is_all_instructions_writen()
+    return len(table.instructionsStatuses) > registers.PC
 
 
 def has_memory_to_read(memory, registers):
@@ -208,29 +195,47 @@ def has_memory_to_read(memory, registers):
 
 def search(memory: Memory, registers: Registers, table: PipelineTable):
     if has_memory_to_read(memory, registers):
-        registers.setMAR(deepcopy(registers.PC))
-        registers.setMBR(deepcopy(memory.getByAddress(registers.MAR)))
-        registers.setIR(deepcopy(registers.MBR))
-
+        registers.setMAR(registers.PC)
+        registers.setMBR(memory.getByAddress(registers.MAR))
         memory_information: list = deepcopy(registers.MBR)
-        registers.incrementPc()
-
         if is_instruction(memory_information):
             inst = Instruction(registers.PC - 1, memory_information[0], memory_information[1], memory_information[2],
                                memory_information[3])
-            registers.setMBR(inst)
+            registers.setIR(inst)
             table.setInstructionSearched(registers.PC - 1, inst.getId())
+        # else:
+        #     registers.setIR(memory_information)
+
+        registers.incrementPc()
 
 
-def issue(registers: Registers, pipeTable: PipelineTable):
-    pass
+def decode(registers: Registers, table: PipelineTable):
+    inst: Instruction = deepcopy(registers.IR)
 
+    while ((isIndirectFetch(inst.r1) or isIndirectFetch(inst.r2)) and not isStall(inst)):
+        if (isIndirectFetch(inst.r1)):
+            registers.setMAR(inst.r1)
+            registers.setMBR(memory.getByAddress(registers.MAR))
+            inst.setR1(registers.MBR)
+            registers.setIR(inst)
 
-def read(registers: Registers, pipeTable: PipelineTable):
-    pass
+        if (isIndirectFetch(inst.r2)):
+            registers.setMAR(inst.r2)
+            registers.setMBR(memory.getByAddress(registers.MAR))
+            inst.setR2(registers.MBR)
+            registers.setIR(inst)
+
+    if isStall(inst):
+        table.setInstructionIssued(registers.PC - 1, "----STALL----")
+    else:
+        table.setInstructionIssued(registers.PC - 1, inst.getId())
 
 
 def execution(registers: Registers, pipeTable: PipelineTable):
+    pass
+
+
+def memoryAccess(registers: Registers, pipeTable: PipelineTable):
     pass
 
 
@@ -252,9 +257,9 @@ def processor_simulation(memory: Memory):
 
 def pipeline(memory: Memory, registers: Registers, pipe_table: PipelineTable):
     write(registers, pipe_table)
+    memoryAccess(registers, pipe_table)
     execution(registers, pipe_table)
-    read(registers, pipe_table)
-    issue(registers, pipe_table)
+    decode(registers, pipe_table)
     search(memory, registers, pipe_table)
 
 
