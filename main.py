@@ -67,13 +67,13 @@ class PipelineTable:
     def setInstructionSearched(self, clock, inst):
         self.setNewLineOrUpdateLast(clock, inst, 0)
 
-    def setInstructionIssued(self, clock, inst):
+    def setInstructionDecoded(self, clock, inst):
         self.setNewLineOrUpdateLast(clock, inst, 1)
 
-    def setInstructionRead(self, clock, inst):
+    def setInstructionExecuted(self, clock, inst):
         self.setNewLineOrUpdateLast(clock, inst, 2)
 
-    def setInstructionExecuted(self, clock, inst):
+    def setInstructionAccessedMemory(self, clock, inst):
         self.setNewLineOrUpdateLast(clock, inst, 3)
 
     def setInstructionWrote(self, clock, inst):
@@ -103,7 +103,7 @@ class PipelineTable:
         return line
 
     def printTable(self):
-        table = tabulate(self.instructionsStatuses, headers=['Clock', "Busca", "Emissao", "Leitura", "Execucao", "Escrita"], tablefmt='orgtbl')
+        table = tabulate(self.instructionsStatuses, headers=['Clock', "Busca", "Decodificacao", "Execucao", "Acesso a Memoria", "Escrita"], tablefmt='orgtbl')
         print(table)
 
 
@@ -203,8 +203,7 @@ def search(memory: Memory, registers: Registers, table: PipelineTable):
                                memory_information[3])
             registers.setIR(inst)
             table.setInstructionSearched(registers.PC - 1, inst.getId())
-        # else:
-        #     registers.setIR(memory_information)
+
 
         registers.incrementPc()
 
@@ -226,9 +225,9 @@ def decode(registers: Registers, table: PipelineTable):
             registers.setIR(inst)
 
     if isStall(inst):
-        table.setInstructionIssued(registers.PC - 1, "----STALL----")
+        table.setInstructionDecoded(registers.PC - 1, "----STALL----")
     else:
-        table.setInstructionIssued(registers.PC - 1, inst.getId())
+        table.setInstructionDecoded(registers.PC - 1, inst.getId())
 
 
 def execution(registers: Registers, pipeTable: PipelineTable):
@@ -306,6 +305,7 @@ def file_out_name():
     return "{}.out".format(out_path)
 
 
+# write log era do trab do anderson
 # def write_log(scoreboarding, functional_units, clock: int):
 #     file_out = open(file_out_name(), "a")
 #     file_out.write('\n\nClock: ' + clock.__str__())
