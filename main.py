@@ -257,7 +257,8 @@ def search(memory: Memory, registers: Registers, table: PipelineTable, bus: List
             bus[0].setOP1(inst.r1)
             bus[0].setOP2(inst.r2)
             registers.incrementPc()
-            table.setInstructionSearched(clock, bus[0].getID())
+
+        table.setInstructionSearched(clock, bus[0].getID())
     bus[4].reset()
 
 
@@ -399,12 +400,12 @@ def initPipeline(memory: Memory, registers: Registers, pipeline_table: PipelineT
     return clock
 
 
-def pipeline(memory: Memory, registers: Registers, pipe_table: PipelineTable, barramento, clock):
-    write(registers, pipe_table, barramento, clock)
-    memoryAccess(pipe_table, barramento, clock)
-    execution(registers, pipe_table, barramento, clock)
-    decode(registers, pipe_table, barramento, clock)
-    search(memory, registers, pipe_table, barramento, clock)
+def pipeline(memory: Memory, registers: Registers, pipe_table: PipelineTable, bus, clock):
+    write(registers, pipe_table, bus, clock)
+    memoryAccess(pipe_table, bus, clock)
+    execution(registers, pipe_table, bus, clock)
+    decode(registers, pipe_table, bus, clock)
+    search(memory, registers, pipe_table, bus, clock)
 
 
 # --------------------------------------------------
